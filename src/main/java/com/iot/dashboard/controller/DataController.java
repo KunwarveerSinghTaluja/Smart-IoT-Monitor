@@ -3,29 +3,41 @@ package com.iot.dashboard.controller;
 import com.iot.dashboard.entity.DeviceData;
 import com.iot.dashboard.service.DeviceDataService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/data")
 @CrossOrigin(origins = "*")
+@RequestMapping("/api/data")
 public class DataController {
 
     @Autowired
     private DeviceDataService deviceDataService;
 
-    @GetMapping("/all")
-    public List<DeviceData> getAllData() {
-        return deviceDataService.getAllData();
+    // Get latest sensor readings
+    @GetMapping("/current")
+    public ResponseEntity<List<DeviceData>> getCurrentData() {
+        return ResponseEntity.ok(deviceDataService.getLatestReadings());
     }
 
+    // Get chart data
+    @GetMapping("/charts/{hours}")
+    public ResponseEntity<Map<String, Object>> getChartData(@PathVariable int hours) {
+        return ResponseEntity.ok(deviceDataService.getChartData(hours));
+    }
+
+    // Get recent messages
+    @GetMapping("/messages")
+    public ResponseEntity<List<DeviceData>> getRecentMessages() {
+        return ResponseEntity.ok(deviceDataService.getRecentMessages(50));
+    }
+
+    // Save data from IoT devices
     @PostMapping
-    public DeviceData saveData(@RequestBody DeviceData data) {
-        return deviceDataService.saveData(data);
-    }
-
-    @GetMapping("/device/{deviceId}")
-    public List<DeviceData> getDeviceData(@PathVariable String deviceId) {
-        return deviceDataService.getLatestData(deviceId, 50);
+    public ResponseEntity<DeviceData> saveDeviceData(@RequestBody DeviceData deviceData) {
+        return ResponseEntity.ok(deviceDataService.saveDeviceData(deviceData));
     }
 }

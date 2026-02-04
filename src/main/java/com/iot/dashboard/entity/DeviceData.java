@@ -11,21 +11,27 @@ public class DeviceData {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "device_id", nullable = false)
     private String deviceId;
-
+    private String dataType; // Add this field
     private Double value;
     private String unit;
+    private LocalDateTime timestamp;
+    private String topic;
 
-    @Column(name = "timestamp")
-    private LocalDateTime timestamp = LocalDateTime.now();
+    public DeviceData() {
+        this.timestamp = LocalDateTime.now();
+    }
 
-    // GETTERS AND SETTERS FOR DeviceData (NOT Device!)
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public String getDeviceId() { return deviceId; }
     public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
+
+    // ✅ ADD THIS GETTER
+    public String getDataType() { return dataType; }
+    public void setDataType(String dataType) { this.dataType = dataType; }
 
     public Double getValue() { return value; }
     public void setValue(Double value) { this.value = value; }
@@ -35,4 +41,7 @@ public class DeviceData {
 
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+
+    public String getTopic() { return topic; }
+    public void setTopic(String topic) { this.topic = topic; }
 }

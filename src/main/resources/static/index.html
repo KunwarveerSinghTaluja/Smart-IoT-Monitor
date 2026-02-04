@@ -6,7 +6,7 @@
     <title>IoT Dashboard v1.0.0 | Professional Monitoring</title>
 
     <!-- Fonts & Icons -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Work+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
 
     <!-- Chart.js -->
@@ -36,7 +36,7 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Work Sans', sans-serif;
             background: var(--dark-bg);
             color: #e2e8f0;
             min-height: 100vh;
@@ -69,6 +69,16 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -79,12 +89,25 @@
             to { transform: translateX(0); opacity: 1; }
         }
 
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
         .animate-fade-in {
             animation: fadeIn 0.5s ease-out;
         }
 
         .animate-slide-in {
             animation: slideIn 0.3s ease-out;
+        }
+
+        .animate-slide-in-right {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .animate-slide-out-right {
+            animation: slideOutRight 0.3s ease-out;
         }
 
         .animate-pulse {
@@ -125,6 +148,7 @@
             border-radius: 50%;
             display: inline-block;
             margin-right: 6px;
+            flex-shrink: 0;
         }
 
         .status-online { background-color: var(--success); }
@@ -169,1078 +193,74 @@
                 rgba(255, 255, 255, 0.05) 50%,
                 var(--card-bg) 75%);
             background-size: 200% 100%;
-            animation: loading 1.5s infinite;
+            animation: shimmer 1.5s infinite;
         }
 
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+        /* Notification System */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 300px;
+            max-width: 400px;
+            z-index: 9999;
+            pointer-events: all;
         }
 
-        /* Notification Badge */
-        .notification-badge {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 18px;
-            height: 18px;
-            background: var(--danger);
-            border-radius: 50%;
-            font-size: 10px;
+        .notification-enter {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .notification-exit {
+            animation: slideOutRight 0.3s ease-out;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 600;
-        }
-    </style>
-
-    <!-- Tailwind Configuration -->
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: 'var(--primary)',
-                        'primary-dark': 'var(--primary-dark)',
-                        secondary: 'var(--secondary)',
-                        success: 'var(--success)',
-                        warning: 'var(--warning)',
-                        danger: 'var(--danger)',
-                        'dark-bg': 'var(--dark-bg)',
-                        'card-bg': 'var(--card-bg)',
-                        'border-color': 'var(--border-color)',
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.5s ease-out',
-                        'slide-in': 'slideIn 0.3s ease-out',
-                        'pulse-slow': 'pulse 2s infinite',
-                        'bounce-slow': 'bounce 3s infinite',
-                    },
-                    backdropBlur: {
-                        xs: '2px',
-                    }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="bg-dark-bg">
-<!-- Loading Screen -->
-<div id="loadingScreen" class="fixed inset-0 bg-dark-bg flex flex-col items-center justify-center z-50">
-    <div class="relative">
-        <div class="w-20 h-20 rounded-full border-4 border-transparent border-t-primary border-r-secondary animate-spin"></div>
-        <div class="absolute inset-0 flex items-center justify-center">
-            <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <span class="material-icons-round text-primary text-2xl">memory</span>
-            </div>
-        </div>
-    </div>
-    <div class="mt-6 text-center">
-        <h2 class="text-xl font-semibold text-white mb-2">IoT Dashboard v1.0.0</h2>
-        <p class="text-gray-400">Initializing monitoring system...</p>
-        <div class="mt-4 w-64 h-1 bg-gray-700 rounded-full overflow-hidden">
-            <div id="loadingBar" class="h-full bg-gradient-to-r from-primary to-secondary" style="width: 0%"></div>
-        </div>
-    </div>
-</div>
-
-<!-- Main Dashboard Container -->
-<div id="dashboard" class="hidden min-h-screen">
-    <!-- Sidebar -->
-    <aside class="fixed left-0 top-0 h-screen w-64 bg-card-bg border-r border-border-color z-40 flex flex-col">
-        <!-- Logo -->
-        <div class="p-6 border-b border-border-color">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                    <span class="material-icons-round text-white">dashboard</span>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold text-white">IoT Monitor</h1>
-                    <span class="text-xs text-primary font-medium">v1.0.0</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Search -->
-        <div class="p-4 border-b border-border-color">
-            <div class="relative">
-                <input type="text"
-                       placeholder="Search devices, metrics..."
-                       class="w-full bg-gray-800/50 border border-border-color rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30">
-                <span class="material-icons-round absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">search</span>
-            </div>
-        </div>
-
-        <!-- Navigation -->
-        <nav class="flex-1 p-4 overflow-y-auto">
-            <div class="space-y-1">
-                <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3 px-2">Main</h3>
-
-                <a href="#" class="nav-item active">
-                    <span class="material-icons-round">dashboard</span>
-                    <span>Overview</span>
-                </a>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">devices</span>
-                    <span>Devices</span>
-                    <span class="ml-auto px-2 py-0.5 text-xs rounded-full bg-primary/20 text-primary">12</span>
-                </a>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">monitor_heart</span>
-                    <span>Live Metrics</span>
-                </a>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">notifications</span>
-                    <span>Alerts</span>
-                    <span class="ml-auto px-2 py-0.5 text-xs rounded-full bg-danger/20 text-danger">3</span>
-                </a>
-            </div>
-
-            <div class="mt-8 space-y-1">
-                <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3 px-2">Monitoring</h3>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">satellite</span>
-                    <span>MQTT Monitor</span>
-                </a>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">analytics</span>
-                    <span>Analytics</span>
-                </a>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">list_alt</span>
-                    <span>System Logs</span>
-                </a>
-            </div>
-
-            <div class="mt-8 space-y-1">
-                <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3 px-2">System</h3>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">settings</span>
-                    <span>Settings</span>
-                </a>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">people</span>
-                    <span>Users</span>
-                </a>
-
-                <a href="#" class="nav-item">
-                    <span class="material-icons-round">help</span>
-                    <span>Help</span>
-                </a>
-            </div>
-        </nav>
-
-        <!-- MQTT Status -->
-        <div class="p-4 border-t border-border-color">
-            <div class="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
-                <div class="relative">
-                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                        <span class="material-icons-round text-primary text-sm">wifi</span>
-                    </div>
-                    <div class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border-2 border-card-bg animate-pulse-slow"></div>
-                </div>
-                <div class="flex-1">
-                    <p class="text-xs font-medium text-white">MQTT Connected</p>
-                    <p class="text-xs text-gray-400">58 messages</p>
-                </div>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Main Content -->
-    <main class="ml-64">
-        <!-- Header -->
-        <header class="sticky top-0 z-30 glass border-b border-border-color">
-            <div class="px-8 py-4 flex items-center justify-between">
-                <!-- Left Section -->
-                <div>
-                    <h2 class="text-xl font-bold text-white">Dashboard Overview</h2>
-                    <p class="text-sm text-gray-400">Real-time monitoring of connected IoT devices</p>
-                </div>
-
-                <!-- Right Section -->
-                <div class="flex items-center space-x-6">
-                    <!-- Time -->
-                    <div class="flex items-center space-x-2">
-                        <span class="material-icons-round text-primary">schedule</span>
-                        <div>
-                            <div id="currentTime" class="text-sm font-semibold text-white">14:48:03</div>
-                            <div id="currentDate" class="text-xs text-gray-400">Tue, Feb 3 2026</div>
-                        </div>
-                    </div>
-
-                    <!-- Add Device Button -->
-                    <button class="btn-primary">
-                        <span class="material-icons-round">add</span>
-                        Add Device
-                    </button>
-
-                    <!-- Notifications -->
-                    <div class="relative">
-                        <button class="btn-icon">
-                            <span class="material-icons-round">notifications</span>
-                            <div class="notification-badge">3</div>
-                        </button>
-                    </div>
-
-                    <!-- User Profile -->
-                    <div class="flex items-center space-x-3">
-                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                            <span class="text-white font-semibold">A</span>
-                        </div>
-                        <div>
-                            <div class="text-sm font-medium text-white">Admin</div>
-                            <div class="text-xs text-gray-400">System Administrator</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- KPI Cards -->
-        <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-                <!-- Total Devices -->
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <div class="kpi-icon bg-primary/10">
-                            <span class="material-icons-round text-primary">devices_other</span>
-                        </div>
-                        <span class="material-icons-round text-gray-400">more_vert</span>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">12</div>
-                        <div class="kpi-label">Total Devices</div>
-                    </div>
-                    <div class="kpi-trend positive">
-                        <span class="material-icons-round">trending_up</span>
-                        <span>+2 this week</span>
-                    </div>
-                </div>
-
-                <!-- Online Devices -->
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <div class="kpi-icon bg-success/10">
-                            <span class="material-icons-round text-success">wifi</span>
-                        </div>
-                        <span class="material-icons-round text-gray-400">more_vert</span>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">6</div>
-                        <div class="kpi-label">Online</div>
-                    </div>
-                    <div class="kpi-trend positive">
-                        <span class="material-icons-round">trending_up</span>
-                        <span>92% uptime</span>
-                    </div>
-                </div>
-
-                <!-- Offline Devices -->
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <div class="kpi-icon bg-danger/10">
-                            <span class="material-icons-round text-danger">wifi_off</span>
-                        </div>
-                        <span class="material-icons-round text-gray-400">more_vert</span>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">3</div>
-                        <div class="kpi-label">Offline</div>
-                    </div>
-                    <div class="kpi-trend negative">
-                        <span class="material-icons-round">trending_down</span>
-                        <span>Needs attention</span>
-                    </div>
-                </div>
-
-                <!-- Warnings -->
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <div class="kpi-icon bg-warning/10">
-                            <span class="material-icons-round text-warning">warning</span>
-                        </div>
-                        <span class="material-icons-round text-gray-400">more_vert</span>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">3</div>
-                        <div class="kpi-label">Warnings</div>
-                    </div>
-                    <div class="kpi-trend">
-                        <span class="material-icons-round">info</span>
-                        <span>Check alerts</span>
-                    </div>
-                </div>
-
-                <!-- Active Alerts -->
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <div class="kpi-icon bg-danger/10">
-                            <span class="material-icons-round text-danger">notification_important</span>
-                        </div>
-                        <span class="material-icons-round text-gray-400">more_vert</span>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">2</div>
-                        <div class="kpi-label">Active Alerts</div>
-                    </div>
-                    <div class="kpi-trend negative">
-                        <span class="material-icons-round">priority_high</span>
-                        <span>Immediate action</span>
-                    </div>
-                </div>
-
-                <!-- Messages/sec -->
-                <div class="kpi-card">
-                    <div class="kpi-header">
-                        <div class="kpi-icon bg-secondary/10">
-                            <span class="material-icons-round text-secondary">speed</span>
-                        </div>
-                        <span class="material-icons-round text-gray-400">more_vert</span>
-                    </div>
-                    <div class="kpi-content">
-                        <div class="kpi-value">3.2</div>
-                        <div class="kpi-label">Messages/sec</div>
-                    </div>
-                    <div class="kpi-trend positive">
-                        <span class="material-icons-round">trending_up</span>
-                        <span>Steady flow</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charts Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                <!-- Temperature Chart -->
-                <div class="chart-container">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h3 class="text-lg font-semibold text-white">Average Temperature</h3>
-                            <p class="text-sm text-gray-400">Last 24 hours monitoring</p>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button class="time-btn active">24H</button>
-                            <button class="time-btn">7D</button>
-                            <button class="time-btn">30D</button>
-                        </div>
-                    </div>
-                    <div class="h-64">
-                        <canvas id="temperatureChart"></canvas>
-                    </div>
-                    <div class="mt-4 flex items-center justify-between text-sm">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full bg-primary mr-2"></div>
-                                <span class="text-gray-400">Current: 34°C</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full bg-secondary mr-2"></div>
-                                <span class="text-gray-400">Avg: 31°C</span>
-                            </div>
-                        </div>
-                        <div class="text-primary font-medium">
-                            <span class="material-icons-round text-sm align-middle">trending_up</span>
-                            <span>+2.5% from yesterday</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Humidity Chart -->
-                <div class="chart-container">
-                    <div class="flex items-center justify-between mb-6">
-                        <div>
-                            <h3 class="text-lg font-semibold text-white">Average Humidity</h3>
-                            <p class="text-sm text-gray-400">Real-time humidity levels</p>
-                        </div>
-                        <div class="flex space-x-2">
-                            <button class="time-btn active">24H</button>
-                            <button class="time-btn">7D</button>
-                            <button class="time-btn">30D</button>
-                        </div>
-                    </div>
-                    <div class="h-64">
-                        <canvas id="humidityChart"></canvas>
-                    </div>
-                    <div class="mt-4 flex items-center justify-between text-sm">
-                        <div class="flex items-center space-x-4">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full bg-success mr-2"></div>
-                                <span class="text-gray-400">Current: 82%</span>
-                            </div>
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full bg-warning mr-2"></div>
-                                <span class="text-gray-400">Target: 70%</span>
-                            </div>
-                        </div>
-                        <div class="text-danger font-medium">
-                            <span class="material-icons-round text-sm align-middle">trending_down</span>
-                            <span>-1.2% from yesterday</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Device Readings & MQTT Monitor -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Device Readings -->
-                <div class="lg:col-span-2">
-                    <div class="chart-container h-full">
-                        <div class="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 class="text-lg font-semibold text-white">Device Readings</h3>
-                                <p class="text-sm text-gray-400">Latest sensor measurements</p>
-                            </div>
-                            <button class="text-sm text-primary font-medium hover:underline">
-                                View All Devices →
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <!-- Temperature 1 -->
-                            <div class="reading-card">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="text-sm font-medium text-gray-300">Living Room Temp</div>
-                                    <span class="material-icons-round text-danger text-lg">thermostat</span>
-                                </div>
-                                <div class="text-3xl font-bold text-white mb-2">31°C</div>
-                                <div class="flex items-center text-sm">
-                                    <span class="status-dot status-online"></span>
-                                    <span class="text-gray-400">Online • Updated 2m ago</span>
-                                </div>
-                            </div>
-
-                            <!-- Temperature 2 -->
-                            <div class="reading-card">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="text-sm font-medium text-gray-300">Kitchen Temp</div>
-                                    <span class="material-icons-round text-danger text-lg">thermostat</span>
-                                </div>
-                                <div class="text-3xl font-bold text-white mb-2">29°C</div>
-                                <div class="flex items-center text-sm">
-                                    <span class="status-dot status-online"></span>
-                                    <span class="text-gray-400">Online • Updated 5m ago</span>
-                                </div>
-                            </div>
-
-                            <!-- Humidity 1 -->
-                            <div class="reading-card">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="text-sm font-medium text-gray-300">Bedroom Humidity</div>
-                                    <span class="material-icons-round text-primary text-lg">water_drop</span>
-                                </div>
-                                <div class="text-3xl font-bold text-white mb-2">73%</div>
-                                <div class="flex items-center text-sm">
-                                    <span class="status-dot status-online"></span>
-                                    <span class="text-gray-400">Online • Updated 1m ago</span>
-                                </div>
-                            </div>
-
-                            <!-- Humidity 2 -->
-                            <div class="reading-card">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="text-sm font-medium text-gray-300">Garage Humidity</div>
-                                    <span class="material-icons-round text-primary text-lg">water_drop</span>
-                                </div>
-                                <div class="text-3xl font-bold text-white mb-2">67%</div>
-                                <div class="flex items-center text-sm">
-                                    <span class="status-dot status-warning"></span>
-                                    <span class="text-gray-400">Warning • High humidity</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Device Status Table -->
-                        <div class="mt-6">
-                            <h4 class="text-sm font-semibold text-white mb-3">Device Status</h4>
-                            <div class="overflow-hidden rounded-lg border border-border-color">
-                                <table class="min-w-full divide-y divide-border-color">
-                                    <thead class="bg-gray-800/50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Device</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Update</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-border-color" id="deviceStatusTable">
-                                    <!-- Filled by JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- MQTT Monitor -->
-                <div>
-                    <div class="chart-container h-full">
-                        <div class="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 class="text-lg font-semibold text-white">MQTT Monitor</h3>
-                                <p class="text-sm text-gray-400">Real-time message stream</p>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <div class="w-2 h-2 rounded-full bg-success animate-pulse-slow"></div>
-                                <span class="text-xs text-success font-medium">Connected</span>
-                            </div>
-                        </div>
-
-                        <!-- Message Stats -->
-                        <div class="grid grid-cols-2 gap-3 mb-6">
-                            <div class="stat-box">
-                                <div class="stat-value">58</div>
-                                <div class="stat-label">Total Messages</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-value">3.2/s</div>
-                                <div class="stat-label">Rate</div>
-                            </div>
-                        </div>
-
-                        <!-- Message Stream -->
-                        <div class="mb-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <h4 class="text-sm font-semibold text-white">Live Stream</h4>
-                                <button id="clearMessages" class="text-xs text-gray-400 hover:text-white">
-                                    Clear All
-                                </button>
-                            </div>
-                            <div class="mqtt-stream" id="mqttStream">
-                                <!-- Messages will appear here -->
-                            </div>
-                        </div>
-
-                        <!-- Publish Control -->
-                        <div class="mt-6 p-4 bg-gray-800/30 rounded-lg border border-border-color">
-                            <h4 class="text-sm font-semibold text-white mb-3">Simulate Message</h4>
-                            <div class="space-y-3">
-                                <select id="mqttTopic" class="w-full bg-gray-800 border border-border-color rounded px-3 py-2 text-sm focus:outline-none focus:border-primary">
-                                    <option value="iot/sensor/temperature">iot/sensor/temperature</option>
-                                    <option value="iot/sensor/humidity">iot/sensor/humidity</option>
-                                    <option value="iot/device/status">iot/device/status</option>
-                                    <option value="iot/alerts/warning">iot/alerts/warning</option>
-                                </select>
-                                <textarea id="mqttPayload" class="w-full bg-gray-800 border border-border-color rounded px-3 py-2 text-sm focus:outline-none focus:border-primary" rows="2" placeholder='{"temperature": 25.5, "humidity": 65}'></textarea>
-                                <button id="publishMessage" class="btn-primary w-full">
-                                    <span class="material-icons-round text-sm">send</span>
-                                    Publish Message
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <footer class="mt-8 pt-6 border-t border-border-color">
-                <div class="flex flex-col md:flex-row justify-between items-center">
-                    <div class="text-sm text-gray-400">
-                        © 2026 IoT Dashboard v1.0.0 • Professional IoT Monitoring System
-                    </div>
-                    <div class="flex items-center space-x-4 mt-4 md:mt-0">
-                        <span class="text-sm text-gray-400">Backend Status:</span>
-                        <div class="flex items-center">
-                            <div class="w-2 h-2 rounded-full bg-success mr-2 animate-pulse-slow"></div>
-                            <span class="text-sm text-success font-medium">Spring Boot Connected</span>
-                        </div>
-                        <span class="text-gray-400">|</span>
-                        <a href="#" class="text-sm text-primary hover:underline">API Documentation</a>
-                    </div>
-                </div>
-            </footer>
-        </div>
-    </main>
-</div>
-
-<!-- JavaScript -->
-<script>
-    // Wait for DOM to load
-    document.addEventListener('DOMContentLoaded', function() {
-        // Simulate loading
-        simulateLoading();
-
-        // Initialize dashboard
-        initializeDashboard();
-
-        // Start real-time updates
-        startRealTimeUpdates();
-    });
-
-    function simulateLoading() {
-        let progress = 0;
-        const loadingBar = document.getElementById('loadingBar');
-        const interval = setInterval(() => {
-            progress += 2;
-            loadingBar.style.width = progress + '%';
-
-            if (progress >= 100) {
-                clearInterval(interval);
-                setTimeout(() => {
-                    document.getElementById('loadingScreen').style.display = 'none';
-                    document.getElementById('dashboard').classList.remove('hidden');
-                    document.getElementById('dashboard').classList.add('animate-fade-in');
-                }, 300);
-            }
-        }, 30);
-    }
-
-    function initializeDashboard() {
-        // Update time
-        updateTime();
-        setInterval(updateTime, 1000);
-
-        // Initialize charts
-        initCharts();
-
-        // Initialize device table
-        initDeviceTable();
-
-        // Initialize MQTT stream
-        initMQTTStream();
-
-        // Setup event listeners
-        setupEventListeners();
-    }
-
-    function updateTime() {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-        const dateStr = now.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'});
-
-        document.getElementById('currentTime').textContent = timeStr;
-        document.getElementById('currentDate').textContent = dateStr;
-    }
-
-    function initCharts() {
-        // Temperature Chart
-        const tempCtx = document.getElementById('temperatureChart').getContext('2d');
-        window.temperatureChart = new Chart(tempCtx, {
-            type: 'line',
-            data: {
-                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'],
-                datasets: [{
-                    label: 'Temperature (°C)',
-                    data: [28, 30, 32, 34, 33, 31, 29],
-                    borderColor: '#00d4ff',
-                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#00d4ff',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
-                        titleColor: '#e2e8f0',
-                        bodyColor: '#e2e8f0',
-                        borderColor: '#334155',
-                        borderWidth: 1
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                            borderColor: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#94a3b8'
-                        }
-                    },
-                    y: {
-                        beginAtZero: false,
-                        min: 25,
-                        max: 40,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                            borderColor: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#94a3b8',
-                            callback: function(value) {
-                                return value + '°C';
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'nearest'
-                }
-            }
-        });
-
-        // Humidity Chart
-        const humidityCtx = document.getElementById('humidityChart').getContext('2d');
-        window.humidityChart = new Chart(humidityCtx, {
-            type: 'line',
-            data: {
-                labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'],
-                datasets: [{
-                    label: 'Humidity (%)',
-                    data: [75, 78, 80, 82, 81, 79, 77],
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#10b981',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
-                        titleColor: '#e2e8f0',
-                        bodyColor: '#e2e8f0',
-                        borderColor: '#334155',
-                        borderWidth: 1
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                            borderColor: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#94a3b8'
-                        }
-                    },
-                    y: {
-                        beginAtZero: false,
-                        min: 60,
-                        max: 90,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                            borderColor: 'rgba(255, 255, 255, 0.1)'
-                        },
-                        ticks: {
-                            color: '#94a3b8',
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'nearest'
-                }
-            }
-        });
-    }
-
-    function initDeviceTable() {
-        const devices = [
-            { name: 'Temperature Sensor 1', type: 'Temperature', status: 'online', lastUpdate: '2 minutes ago' },
-            { name: 'Humidity Sensor 1', type: 'Humidity', status: 'online', lastUpdate: '1 minute ago' },
-            { name: 'Motion Detector', type: 'Motion', status: 'offline', lastUpdate: '5 hours ago' },
-            { name: 'Smart Light 1', type: 'Light', status: 'online', lastUpdate: '30 seconds ago' },
-            { name: 'Power Monitor', type: 'Energy', status: 'warning', lastUpdate: '10 minutes ago' },
-            { name: 'Door Sensor', type: 'Security', status: 'online', lastUpdate: 'Just now' }
-        ];
-
-        const tableBody = document.getElementById('deviceStatusTable');
-        devices.forEach(device => {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-gray-800/30 transition-colors';
-
-            let statusColor = 'text-success';
-            let statusDot = 'status-online';
-            if (device.status === 'offline') {
-                statusColor = 'text-danger';
-                statusDot = 'status-offline';
-            } else if (device.status === 'warning') {
-                statusColor = 'text-warning';
-                statusDot = 'status-warning';
-            }
-
-            row.innerHTML = `
-                <td class="px-4 py-3 whitespace-nowrap">
-                    <div class="text-sm font-medium text-white">${device.name}</div>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap">
-                    <div class="text-sm text-gray-400">${device.type}</div>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap">
-                    <div class="flex items-center">
-                        <span class="${statusDot}"></span>
-                        <span class="text-sm ${statusColor} font-medium">${device.status.charAt(0).toUpperCase() + device.status.slice(1)}</span>
-                    </div>
-                </td>
-                <td class="px-4 py-3 whitespace-nowrap">
-                    <div class="text-sm text-gray-400">${device.lastUpdate}</div>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
-    }
-
-    function initMQTTStream() {
-        // Add initial messages
-        addMQTTMessage('iot/sensor/temperature', '{"device": "temp_sensor_1", "value": 31.5, "unit": "°C"}');
-        addMQTTMessage('iot/sensor/humidity', '{"device": "humidity_1", "value": 73, "unit": "%"}');
-        addMQTTMessage('iot/device/status', '{"device": "motion_1", "status": "online", "battery": 85}');
-        addMQTTMessage('iot/alerts/warning', '{"device": "garage_humidity", "alert": "High humidity detected", "value": 82}');
-        addMQTTMessage('iot/sensor/temperature', '{"device": "kitchen_temp", "value": 29.2, "unit": "°C"}');
-
-        // Setup clear button
-        document.getElementById('clearMessages').addEventListener('click', () => {
-            document.getElementById('mqttStream').innerHTML = '';
-        });
-
-        // Setup publish button
-        document.getElementById('publishMessage').addEventListener('click', () => {
-            const topic = document.getElementById('mqttTopic').value;
-            let payload = document.getElementById('mqttPayload').value;
-
-            if (!payload.trim()) {
-                // Generate random payload based on topic
-                if (topic.includes('temperature')) {
-                    payload = `{"device": "simulated_temp", "value": ${(Math.random() * 10 + 25).toFixed(1)}, "unit": "°C"}`;
-                } else if (topic.includes('humidity')) {
-                    payload = `{"device": "simulated_humidity", "value": ${Math.floor(Math.random() * 20 + 60)}, "unit": "%"}`;
-                } else {
-                    payload = `{"device": "simulated_${Date.now()}", "status": "active", "timestamp": "${new Date().toISOString()}"}`;
-                }
-            }
-
-            addMQTTMessage(topic, payload);
-            document.getElementById('mqttPayload').value = '';
-        });
-    }
-
-    function addMQTTMessage(topic, payload) {
-        const stream = document.getElementById('mqttStream');
-        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-        const messageId = Date.now();
-
-        const messageDiv = document.createElement('div');
-        messageDiv.className = 'mqtt-message p-3 border-b border-border-color last:border-b-0 hover:bg-gray-800/20';
-        messageDiv.innerHTML = `
-            <div class="flex justify-between items-start mb-1">
-                <span class="text-xs font-mono text-primary font-medium truncate">${topic}</span>
-                <span class="text-xs text-gray-400 whitespace-nowrap ml-2">${time}</span>
-            </div>
-            <pre class="text-xs text-gray-300 font-mono overflow-x-auto bg-gray-900/30 p-2 rounded">${payload}</pre>
-        `;
-
-        stream.insertBefore(messageDiv, stream.firstChild);
-
-        // Keep only 10 messages
-        if (stream.children.length > 10) {
-            stream.removeChild(stream.lastChild);
+            animation: fadeIn 0.2s ease-out;
         }
 
-        // Update message count
-        const messageCount = stream.children.length;
-        document.querySelector('.messages-count').textContent = `${messageCount} messages`;
-
-        // Animate new message
-        messageDiv.style.animation = 'fadeIn 0.3s ease-out';
-    }
-
-    function setupEventListeners() {
-        // Navigation items
-        document.querySelectorAll('.nav-item').forEach(item => {
-            item.addEventListener('click', function(e) {
-                e.preventDefault();
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                this.classList.add('active');
-
-                // Add ripple effect
-                const ripple = document.createElement('span');
-                const rect = this.getBoundingClientRect();
-                const size = Math.max(rect.width, rect.height);
-                const x = e.clientX - rect.left - size / 2;
-                const y = e.clientY - rect.top - size / 2;
-
-                ripple.style.cssText = `
-                    position: absolute;
-                    border-radius: 50%;
-                    background: rgba(0, 212, 255, 0.3);
-                    transform: scale(0);
-                    animation: ripple 0.6s linear;
-                    width: ${size}px;
-                    height: ${size}px;
-                    top: ${y}px;
-                    left: ${x}px;
-                    pointer-events: none;
-                `;
-
-                this.appendChild(ripple);
-                setTimeout(() => ripple.remove(), 600);
-            });
-        });
-
-        // Time range buttons
-        document.querySelectorAll('.time-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-            });
-        });
-
-        // Add device button
-        document.querySelector('.btn-primary').addEventListener('click', () => {
-            showNotification('Add Device', 'Device management panel would open here', 'info');
-        });
-
-        // Notification button
-        document.querySelector('.btn-icon').addEventListener('click', () => {
-            showNotification('Notifications', 'You have 3 unread notifications', 'warning');
-        });
-    }
-
-    function startRealTimeUpdates() {
-        // Update charts every 10 seconds
-        setInterval(() => {
-            // Add random data point to temperature chart
-            const tempData = window.temperatureChart.data.datasets[0].data;
-            tempData.shift();
-            tempData.push(28 + Math.random() * 8);
-            window.temperatureChart.update('none');
-
-            // Add random data point to humidity chart
-            const humidityData = window.humidityChart.data.datasets[0].data;
-            humidityData.shift();
-            humidityData.push(70 + Math.random() * 15);
-            window.humidityChart.update('none');
-
-            // Update device readings
-            updateDeviceReadings();
-
-            // Add random MQTT message occasionally
-            if (Math.random() > 0.7) {
-                const topics = [
-                    'iot/sensor/temperature',
-                    'iot/sensor/humidity',
-                    'iot/device/status',
-                    'iot/alerts/warning'
-                ];
-                const topic = topics[Math.floor(Math.random() * topics.length)];
-                const payload = generateRandomPayload(topic);
-                addMQTTMessage(topic, payload);
-            }
-        }, 10000);
-    }
-
-    function updateDeviceReadings() {
-        // Randomly update one of the reading cards
-        const cards = document.querySelectorAll('.reading-card');
-        const randomCard = cards[Math.floor(Math.random() * cards.length)];
-        const valueElement = randomCard.querySelector('.text-3xl');
-
-        if (valueElement.textContent.includes('°C')) {
-            const newTemp = 28 + Math.random() * 6;
-            valueElement.textContent = newTemp.toFixed(1) + '°C';
-            randomCard.querySelector('.text-gray-400').textContent = 'Online • Updated just now';
-        } else if (valueElement.textContent.includes('%')) {
-            const newHumidity = 65 + Math.random() * 15;
-            valueElement.textContent = Math.round(newHumidity) + '%';
-            randomCard.querySelector('.text-gray-400').textContent = 'Online • Updated just now';
-        }
-    }
-
-    function generateRandomPayload(topic) {
-        const now = new Date().toISOString();
-        if (topic.includes('temperature')) {
-            return `{"device": "auto_sensor_${Math.floor(Math.random() * 100)}", "value": ${(Math.random() * 10 + 25).toFixed(1)}, "unit": "°C", "timestamp": "${now}"}`;
-        } else if (topic.includes('humidity')) {
-            return `{"device": "auto_humidity_${Math.floor(Math.random() * 100)}", "value": ${Math.floor(Math.random() * 20 + 60)}, "unit": "%", "timestamp": "${now}"}`;
-        } else if (topic.includes('status')) {
-            return `{"device": "device_${Math.floor(Math.random() * 100)}", "status": "online", "battery": ${Math.floor(Math.random() * 50 + 50)}, "timestamp": "${now}"}`;
-        } else {
-            return `{"device": "alert_system", "alert": "Random event detected", "severity": "low", "timestamp": "${now}"}`;
-        }
-    }
-
-    function showNotification(title, message, type = 'info') {
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = `fixed top-4 right-4 z-50 max-w-sm animate-slide-in`;
-
-        let bgColor = 'bg-primary/90';
-        let icon = 'info';
-
-        if (type === 'warning') {
-            bgColor = 'bg-warning/90';
-            icon = 'warning';
-        } else if (type === 'success') {
-            bgColor = 'bg-success/90';
-            icon = 'check_circle';
-        } else if (type === 'danger') {
-            bgColor = 'bg-danger/90';
-            icon = 'error';
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: fadeIn 0.3s ease-out;
         }
 
-        notification.innerHTML = `
-            <div class="${bgColor} text-white rounded-lg shadow-lg p-4 flex items-start space-x-3">
-                <span class="material-icons-round flex-shrink-0">${icon}</span>
-                <div class="flex-1">
-                    <div class="font-semibold">${title}</div>
-                    <div class="text-sm opacity-90 mt-1">${message}</div>
-                </div>
-                <button onclick="this.parentElement.parentElement.remove()" class="text-white/70 hover:text-white">
-                    <span class="material-icons-round text-sm">close</span>
-                </button>
-            </div>
-        `;
-
-        document.body.appendChild(notification);
-
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
-            }
-        }, 5000);
-    }
-
-    // Add CSS for ripple effect
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes ripple {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
+        /* Prevent text overflow */
+        .text-truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
+        .line-clamp-1 {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Navigation */
         .nav-item {
             position: relative;
             overflow: hidden;
@@ -1252,6 +272,7 @@
             text-decoration: none;
             transition: all 0.2s;
             margin-bottom: 0.25rem;
+            cursor: pointer;
         }
 
         .nav-item:hover {
@@ -1268,14 +289,19 @@
         .nav-item .material-icons-round {
             margin-right: 0.75rem;
             font-size: 1.25rem;
+            flex-shrink: 0;
         }
 
+        /* KPI Cards */
         .kpi-card {
             background: linear-gradient(145deg, var(--card-bg), #1a2236);
             border-radius: 16px;
             padding: 1.5rem;
             border: 1px solid var(--border-color);
             transition: all 0.3s;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
         }
 
         .kpi-card:hover {
@@ -1298,6 +324,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .kpi-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .kpi-value {
@@ -1305,6 +339,7 @@
             font-weight: 700;
             color: white;
             line-height: 1;
+            font-family: 'Space Mono', monospace;
         }
 
         .kpi-label {
@@ -1312,13 +347,15 @@
             color: #94a3b8;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            margin-top: 0.25rem;
+            margin-top: 0.5rem;
+            white-space: nowrap;
         }
 
         .kpi-trend {
             display: flex;
             align-items: center;
-            margin-top: 0.75rem;
+            margin-top: auto;
+            padding-top: 0.75rem;
             font-size: 0.75rem;
             color: #10b981;
         }
@@ -1330,8 +367,10 @@
         .kpi-trend .material-icons-round {
             font-size: 1rem;
             margin-right: 0.25rem;
+            flex-shrink: 0;
         }
 
+        /* Buttons */
         .time-btn {
             padding: 0.375rem 0.75rem;
             border: 1px solid var(--border-color);
@@ -1360,6 +399,9 @@
             border-radius: 12px;
             padding: 1.25rem;
             transition: all 0.3s;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
         }
 
         .reading-card:hover {
@@ -1381,11 +423,39 @@
             cursor: pointer;
             transition: all 0.3s;
             gap: 0.5rem;
+            white-space: nowrap;
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.625rem 1.25rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            gap: 0.5rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
         }
 
         .btn-icon {
@@ -1401,6 +471,7 @@
             justify-content: center;
             cursor: pointer;
             transition: all 0.3s;
+            flex-shrink: 0;
         }
 
         .btn-icon:hover {
@@ -1421,6 +492,7 @@
             font-size: 1.5rem;
             font-weight: 700;
             color: white;
+            font-family: 'Space Mono', monospace;
         }
 
         .stat-label {
@@ -1432,14 +504,1588 @@
         }
 
         .mqtt-stream {
-            height: 200px;
+            height: 280px;
             overflow-y: auto;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             background: rgba(0, 0, 0, 0.2);
         }
-    `;
-    document.head.appendChild(style);
+
+        /* Form inputs */
+        .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.625rem 1rem;
+            color: white;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #e2e8f0;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Notification Badge */
+        .notification-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            min-width: 18px;
+            height: 18px;
+            background: var(--danger);
+            border-radius: 9px;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            padding: 0 4px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            .kpi-value {
+                font-size: 1.875rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .kpi-card {
+                min-height: auto;
+            }
+
+            .kpi-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'var(--primary)',
+                        'primary-dark': 'var(--primary-dark)',
+                        secondary: 'var(--secondary)',
+                        success: 'var(--success)',
+                        warning: 'var(--warning)',
+                        danger: 'var(--danger)',
+                        'dark-bg': 'var(--dark-bg)',
+                        'card-bg': 'var(--card-bg)',
+                        'border-color': 'var(--border-color)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-dark-bg">
+
+<!-- Notification Container -->
+<div id="notificationContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-3 pointer-events-none">
+    <!-- Notifications will be added here -->
+</div>
+
+<!-- Loading Screen -->
+<div id="loadingScreen" class="fixed inset-0 bg-dark-bg flex flex-col items-center justify-center z-50">
+    <div class="relative">
+        <div class="w-20 h-20 rounded-full border-4 border-transparent border-t-primary border-r-secondary animate-spin"></div>
+        <div class="absolute inset-0 flex items-center justify-center">
+            <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <span class="material-icons-round text-primary text-2xl">memory</span>
+            </div>
+        </div>
+    </div>
+    <div class="mt-6 text-center">
+        <h2 class="text-xl font-semibold text-white mb-2">IoT Dashboard v1.0.0</h2>
+        <p class="text-gray-400">Initializing monitoring system...</p>
+        <div class="mt-4 w-64 h-1 bg-gray-700 rounded-full overflow-hidden">
+            <div id="loadingBar" class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-300" style="width: 0%"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Dashboard Container -->
+<div id="dashboard" class="hidden min-h-screen">
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-screen w-64 bg-card-bg border-r border-border-color z-40 flex flex-col">
+        <!-- Logo -->
+        <div class="p-6 border-b border-border-color flex-shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons-round text-white">dashboard</span>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-lg font-bold text-white truncate">IoT Monitor</h1>
+                    <span class="text-xs text-primary font-medium">v1.0.0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="p-4 border-b border-border-color flex-shrink-0">
+            <div class="relative">
+                <input type="text"
+                       id="searchInput"
+                       placeholder="Search devices..."
+                       class="w-full bg-gray-800/50 border border-border-color rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30">
+                <span class="material-icons-round absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">search</span>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex-1 p-4 overflow-y-auto">
+            <div class="space-y-1">
+                <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3 px-2">Main</h3>
+
+                <a href="#overview" class="nav-item active" data-section="overview">
+                    <span class="material-icons-round">dashboard</span>
+                    <span class="truncate">Overview</span>
+                </a>
+
+                <a href="#devices" class="nav-item" data-section="devices">
+                    <span class="material-icons-round">devices</span>
+                    <span class="truncate">Devices</span>
+                    <span id="deviceCount" class="ml-auto px-2 py-0.5 text-xs rounded-full bg-primary/20 text-primary flex-shrink-0">0</span>
+                </a>
+
+                <a href="#metrics" class="nav-item" data-section="metrics">
+                    <span class="material-icons-round">monitor_heart</span>
+                    <span class="truncate">Live Metrics</span>
+                </a>
+
+                <a href="#alerts" class="nav-item" data-section="alerts">
+                    <span class="material-icons-round">notifications</span>
+                    <span class="truncate">Alerts</span>
+                    <span id="alertCount" class="ml-auto px-2 py-0.5 text-xs rounded-full bg-danger/20 text-danger flex-shrink-0">0</span>
+                </a>
+            </div>
+
+            <div class="mt-8 space-y-1">
+                <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3 px-2">Monitoring</h3>
+
+                <a href="#mqtt" class="nav-item" data-section="mqtt">
+                    <span class="material-icons-round">satellite</span>
+                    <span class="truncate">MQTT Monitor</span>
+                </a>
+
+                <a href="#analytics" class="nav-item" data-section="analytics">
+                    <span class="material-icons-round">analytics</span>
+                    <span class="truncate">Analytics</span>
+                </a>
+
+                <a href="#logs" class="nav-item" data-section="logs">
+                    <span class="material-icons-round">list_alt</span>
+                    <span class="truncate">System Logs</span>
+                </a>
+            </div>
+
+            <div class="mt-8 space-y-1">
+                <h3 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3 px-2">System</h3>
+
+                <a href="#settings" class="nav-item" data-section="settings">
+                    <span class="material-icons-round">settings</span>
+                    <span class="truncate">Settings</span>
+                </a>
+
+                <a href="#users" class="nav-item" data-section="users">
+                    <span class="material-icons-round">people</span>
+                    <span class="truncate">Users</span>
+                </a>
+
+                <a href="#help" class="nav-item" data-section="help">
+                    <span class="material-icons-round">help</span>
+                    <span class="truncate">Help</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- MQTT Status -->
+        <div class="p-4 border-t border-border-color flex-shrink-0">
+            <div class="flex items-center space-x-3 p-3 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20">
+                <div class="relative flex-shrink-0">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span class="material-icons-round text-primary text-sm">wifi</span>
+                    </div>
+                    <div id="mqttStatusDot" class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-danger rounded-full border-2 border-card-bg"></div>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-medium text-white truncate">Backend Status</p>
+                    <p id="mqttStatusText" class="text-xs text-gray-400 truncate">Disconnected</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-64">
+        <!-- Header -->
+        <header class="sticky top-0 z-30 glass border-b border-border-color">
+            <div class="px-6 py-4 flex items-center justify-between gap-4">
+                <!-- Left Section -->
+                <div class="min-w-0">
+                    <h2 class="text-xl font-bold text-white truncate">Dashboard Overview</h2>
+                    <p class="text-sm text-gray-400 truncate">Real-time monitoring of connected IoT devices</p>
+                </div>
+
+                <!-- Right Section -->
+                <div class="flex items-center gap-4 flex-shrink-0">
+                    <!-- Time -->
+                    <div class="hidden md:flex items-center space-x-2">
+                        <span class="material-icons-round text-primary flex-shrink-0">schedule</span>
+                        <div class="min-w-0">
+                            <div id="currentTime" class="text-sm font-semibold text-white whitespace-nowrap font-mono">14:48:03</div>
+                            <div id="currentDate" class="text-xs text-gray-400 whitespace-nowrap">Tue, Feb 3 2026</div>
+                        </div>
+                    </div>
+
+                    <!-- Add Device Button -->
+                    <button id="addDeviceBtn" class="btn-primary">
+                        <span class="material-icons-round">add</span>
+                        <span class="hidden sm:inline">Add Device</span>
+                    </button>
+
+                    <!-- Notifications -->
+                    <div class="relative">
+                        <button id="notificationBtn" class="btn-icon">
+                            <span class="material-icons-round">notifications</span>
+                            <div id="notificationBadge" class="notification-badge" style="display: none;">0</div>
+                        </button>
+                    </div>
+
+                    <!-- User Profile -->
+                    <div class="hidden lg:flex items-center space-x-3">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
+                            <span class="text-white font-semibold">A</span>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="text-sm font-medium text-white truncate">Admin</div>
+                            <div class="text-xs text-gray-400 truncate">System Administrator</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- KPI Cards -->
+        <div class="p-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+                <!-- Total Devices -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon bg-primary/10">
+                            <span class="material-icons-round text-primary">devices_other</span>
+                        </div>
+                        <span class="material-icons-round text-gray-400 cursor-pointer">more_vert</span>
+                    </div>
+                    <div class="kpi-content">
+                        <div id="totalDevices" class="kpi-value">0</div>
+                        <div class="kpi-label">Total Devices</div>
+                    </div>
+                    <div class="kpi-trend positive">
+                        <span class="material-icons-round">trending_up</span>
+                        <span class="truncate">Real-time data</span>
+                    </div>
+                </div>
+
+                <!-- Online Devices -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon bg-success/10">
+                            <span class="material-icons-round text-success">wifi</span>
+                        </div>
+                        <span class="material-icons-round text-gray-400 cursor-pointer">more_vert</span>
+                    </div>
+                    <div class="kpi-content">
+                        <div id="onlineDevices" class="kpi-value">0</div>
+                        <div class="kpi-label">Online</div>
+                    </div>
+                    <div class="kpi-trend positive">
+                        <span class="material-icons-round">trending_up</span>
+                        <span id="uptimePercentage" class="truncate">0% uptime</span>
+                    </div>
+                </div>
+
+                <!-- Offline Devices -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon bg-danger/10">
+                            <span class="material-icons-round text-danger">wifi_off</span>
+                        </div>
+                        <span class="material-icons-round text-gray-400 cursor-pointer">more_vert</span>
+                    </div>
+                    <div class="kpi-content">
+                        <div id="offlineDevices" class="kpi-value">0</div>
+                        <div class="kpi-label">Offline</div>
+                    </div>
+                    <div class="kpi-trend negative">
+                        <span class="material-icons-round">trending_down</span>
+                        <span id="offlineStatus" class="truncate">All good</span>
+                    </div>
+                </div>
+
+                <!-- Warnings -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon bg-warning/10">
+                            <span class="material-icons-round text-warning">warning</span>
+                        </div>
+                        <span class="material-icons-round text-gray-400 cursor-pointer">more_vert</span>
+                    </div>
+                    <div class="kpi-content">
+                        <div id="warningDevices" class="kpi-value">0</div>
+                        <div class="kpi-label">Warnings</div>
+                    </div>
+                    <div class="kpi-trend">
+                        <span class="material-icons-round">info</span>
+                        <span id="warningStatus" class="truncate">No warnings</span>
+                    </div>
+                </div>
+
+                <!-- Active Alerts -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon bg-danger/10">
+                            <span class="material-icons-round text-danger">notification_important</span>
+                        </div>
+                        <span class="material-icons-round text-gray-400 cursor-pointer">more_vert</span>
+                    </div>
+                    <div class="kpi-content">
+                        <div id="activeAlerts" class="kpi-value">0</div>
+                        <div class="kpi-label">Active Alerts</div>
+                    </div>
+                    <div class="kpi-trend negative">
+                        <span class="material-icons-round">priority_high</span>
+                        <span id="alertStatus" class="truncate">No alerts</span>
+                    </div>
+                </div>
+
+                <!-- Messages/sec -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-icon bg-secondary/10">
+                            <span class="material-icons-round text-secondary">speed</span>
+                        </div>
+                        <span class="material-icons-round text-gray-400 cursor-pointer">more_vert</span>
+                    </div>
+                    <div class="kpi-content">
+                        <div id="messageRate" class="kpi-value">0.0</div>
+                        <div class="kpi-label">Messages/sec</div>
+                    </div>
+                    <div class="kpi-trend positive">
+                        <span class="material-icons-round">trending_up</span>
+                        <span class="truncate">Live stream</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <!-- Temperature Chart -->
+                <div class="chart-container">
+                    <div class="flex items-center justify-between mb-6 gap-4">
+                        <div class="min-w-0">
+                            <h3 class="text-lg font-semibold text-white truncate">Average Temperature</h3>
+                            <p class="text-sm text-gray-400 truncate">Last 24 hours monitoring</p>
+                        </div>
+                        <div class="flex space-x-2 flex-shrink-0">
+                            <button class="time-btn active" data-hours="24">24H</button>
+                            <button class="time-btn" data-hours="168">7D</button>
+                            <button class="time-btn" data-hours="720">30D</button>
+                        </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="temperatureChart"></canvas>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between text-sm flex-wrap gap-2">
+                        <div class="flex items-center flex-wrap gap-4">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-primary mr-2 flex-shrink-0"></div>
+                                <span id="currentTemp" class="text-gray-400 whitespace-nowrap">Current: 0.0°C</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-secondary mr-2 flex-shrink-0"></div>
+                                <span id="avgTemp" class="text-gray-400 whitespace-nowrap">Avg: 0.0°C</span>
+                            </div>
+                        </div>
+                        <div class="text-primary font-medium whitespace-nowrap">
+                            <span class="material-icons-round text-sm align-middle">trending_up</span>
+                            <span>Real-time data</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Humidity Chart -->
+                <div class="chart-container">
+                    <div class="flex items-center justify-between mb-6 gap-4">
+                        <div class="min-w-0">
+                            <h3 class="text-lg font-semibold text-white truncate">Average Humidity</h3>
+                            <p class="text-sm text-gray-400 truncate">Real-time humidity levels</p>
+                        </div>
+                        <div class="flex space-x-2 flex-shrink-0">
+                            <button class="time-btn active" data-hours="24">24H</button>
+                            <button class="time-btn" data-hours="168">7D</button>
+                            <button class="time-btn" data-hours="720">30D</button>
+                        </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="humidityChart"></canvas>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between text-sm flex-wrap gap-2">
+                        <div class="flex items-center flex-wrap gap-4">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-success mr-2 flex-shrink-0"></div>
+                                <span id="currentHumidity" class="text-gray-400 whitespace-nowrap">Current: 0.0%</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-warning mr-2 flex-shrink-0"></div>
+                                <span id="targetHumidity" class="text-gray-400 whitespace-nowrap">Target: 70%</span>
+                            </div>
+                        </div>
+                        <div class="text-success font-medium whitespace-nowrap">
+                            <span class="material-icons-round text-sm align-middle">check_circle</span>
+                            <span>Real-time data</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Device Readings & MQTT Monitor -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Device Readings -->
+                <div class="lg:col-span-2">
+                    <div class="chart-container h-full">
+                        <div class="flex items-center justify-between mb-6 gap-4">
+                            <div class="min-w-0">
+                                <h3 class="text-lg font-semibold text-white truncate">Device Readings</h3>
+                                <p class="text-sm text-gray-400 truncate">Latest sensor measurements</p>
+                            </div>
+                            <button id="refreshDataBtn" class="text-sm text-primary font-medium hover:underline whitespace-nowrap">
+                                Refresh Data →
+                            </button>
+                        </div>
+                        <div id="readingCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <!-- Will be filled by JavaScript -->
+                        </div>
+
+                        <!-- Device Status Table -->
+                        <div class="mt-6">
+                            <h4 class="text-sm font-semibold text-white mb-3">Device Status</h4>
+                            <div class="overflow-x-auto rounded-lg border border-border-color">
+                                <table class="min-w-full divide-y divide-border-color">
+                                    <thead class="bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Device</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Update</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-border-color" id="deviceStatusTable">
+                                    <!-- Filled by JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MQTT Monitor -->
+                <div>
+                    <div class="chart-container h-full">
+                        <div class="flex items-center justify-between mb-6 gap-4">
+                            <div class="min-w-0">
+                                <h3 class="text-lg font-semibold text-white truncate">MQTT Monitor</h3>
+                                <p class="text-sm text-gray-400 truncate">Real-time message stream</p>
+                            </div>
+                            <div class="flex items-center space-x-2 flex-shrink-0">
+                                <div id="backendStatusDot" class="w-2 h-2 rounded-full bg-danger flex-shrink-0"></div>
+                                <span id="backendStatusText" class="text-xs text-danger font-medium whitespace-nowrap">Disconnected</span>
+                            </div>
+                        </div>
+
+                        <!-- Message Stats -->
+                        <div class="grid grid-cols-2 gap-3 mb-6">
+                            <div class="stat-box">
+                                <div id="totalMessages" class="stat-value">0</div>
+                                <div class="stat-label">Total Messages</div>
+                            </div>
+                            <div class="stat-box">
+                                <div id="messageRate2" class="stat-value">0.0/s</div>
+                                <div class="stat-label">Rate</div>
+                            </div>
+                        </div>
+
+                        <!-- Message Stream -->
+                        <div class="mb-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-white">Live Stream</h4>
+                                <button id="clearMessages" class="text-xs text-gray-400 hover:text-white transition-colors">
+                                    Clear All
+                                </button>
+                            </div>
+                            <div class="mqtt-stream" id="mqttStream">
+                                <div class="p-4 text-center text-gray-400 text-sm">
+                                    No messages yet. Start publishing to see data here.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Publish Control -->
+                        <div class="mt-6 p-4 bg-gray-800/30 rounded-lg border border-border-color">
+                            <h4 class="text-sm font-semibold text-white mb-3">Send Message to Backend</h4>
+                            <div class="space-y-3">
+                                <select id="mqttTopic" class="form-input">
+                                    <option value="iot/sensor/temperature">iot/sensor/temperature</option>
+                                    <option value="iot/sensor/humidity">iot/sensor/humidity</option>
+                                    <option value="iot/device/status">iot/device/status</option>
+                                    <option value="iot/alerts/warning">iot/alerts/warning</option>
+                                </select>
+                                <textarea id="mqttPayload" class="form-input" rows="3" placeholder='{"deviceId": "sensor1", "value": 25.5, "unit": "°C", "timestamp": "2024-01-01T12:00:00Z"}'></textarea>
+                                <button id="publishMessage" class="btn-primary w-full">
+                                    <span class="material-icons-round text-sm">send</span>
+                                    Send to Backend
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="mt-8 pt-6 border-t border-border-color">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="text-sm text-gray-400 text-center md:text-left">
+                        © 2026 IoT Dashboard v1.0.0 • Professional IoT Monitoring System
+                    </div>
+                    <div class="flex items-center flex-wrap justify-center gap-4 text-sm">
+                        <span class="text-gray-400">Backend Status:</span>
+                        <div class="flex items-center">
+                            <div id="footerStatusDot" class="w-2 h-2 rounded-full bg-danger mr-2 flex-shrink-0"></div>
+                            <span id="footerStatusText" class="text-danger font-medium">Spring Boot Disconnected</span>
+                        </div>
+                        <span class="text-gray-400">|</span>
+                        <a href="#" class="text-primary hover:underline">API Documentation</a>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </main>
+</div>
+
+<!-- Add Device Modal -->
+<div id="addDeviceModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="p-6 border-b border-border-color">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-bold text-white">Add New Device</h3>
+                <button id="closeModalBtn" class="btn-icon">
+                    <span class="material-icons-round">close</span>
+                </button>
+            </div>
+        </div>
+        <div class="p-6">
+            <form id="addDeviceForm" class="space-y-4">
+                <div>
+                    <label class="form-label">Device Name</label>
+                    <input type="text" id="deviceName" class="form-input" placeholder="e.g., Living Room Sensor" required>
+                </div>
+                <div>
+                    <label class="form-label">Device Type</label>
+                    <select id="deviceType" class="form-input" required>
+                        <option value="temperature">Temperature Sensor</option>
+                        <option value="humidity">Humidity Sensor</option>
+                        <option value="motion">Motion Detector</option>
+                        <option value="light">Smart Light</option>
+                        <option value="energy">Power Monitor</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Location</label>
+                    <input type="text" id="deviceLocation" class="form-input" placeholder="e.g., Living Room">
+                </div>
+                <div>
+                    <label class="form-label">Device ID (optional)</label>
+                    <input type="text" id="deviceId" class="form-input" placeholder="Auto-generated if empty">
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" class="btn-primary flex-1">
+                        <span class="material-icons-round">add</span>
+                        Add Device
+                    </button>
+                    <button type="button" id="cancelModalBtn" class="btn-secondary flex-1">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    const API_BASE = "http://localhost:8080/api";
+    let temperatureChart = null;
+    let humidityChart = null;
+    let isBackendConnected = false;
+    let currentChartHours = 24;
+    let messageCount = 0;
+    let messageStartTime = Date.now();
+    let notificationQueue = [];
+
+    // ============================================
+    // NOTIFICATION SYSTEM
+    // ============================================
+
+    class NotificationManager {
+        constructor() {
+            this.container = document.getElementById('notificationContainer');
+            this.notifications = [];
+        }
+
+        show(title, message, type = 'info', duration = 5000) {
+            const notification = document.createElement('div');
+            const id = Date.now() + Math.random();
+
+            let bgColor = 'bg-blue-600';
+            let icon = 'info';
+
+            if (type === 'warning') {
+                bgColor = 'bg-warning';
+                icon = 'warning';
+            } else if (type === 'success') {
+                bgColor = 'bg-success';
+                icon = 'check_circle';
+            } else if (type === 'danger' || type === 'error') {
+                bgColor = 'bg-danger';
+                icon = 'error';
+            }
+
+            notification.className = 'notification notification-enter pointer-events-auto';
+            notification.innerHTML = `
+                <div class="${bgColor} text-white rounded-lg shadow-lg p-4 flex items-start space-x-3 min-w-[300px] max-w-[400px]">
+                    <span class="material-icons-round flex-shrink-0">${icon}</span>
+                    <div class="flex-1 min-w-0">
+                        <div class="font-semibold truncate">${title}</div>
+                        <div class="text-sm opacity-90 mt-1 line-clamp-2">${message}</div>
+                    </div>
+                    <button onclick="notificationManager.remove(${id})" class="text-white/70 hover:text-white flex-shrink-0 transition-colors">
+                        <span class="material-icons-round text-sm">close</span>
+                    </button>
+                </div>
+            `;
+
+            notification.dataset.id = id;
+            this.container.appendChild(notification);
+            this.notifications.push({ id, element: notification });
+
+            if (duration > 0) {
+                setTimeout(() => this.remove(id), duration);
+            }
+
+            return id;
+        }
+
+        remove(id) {
+            const notification = this.notifications.find(n => n.id === id);
+            if (notification) {
+                notification.element.classList.remove('notification-enter');
+                notification.element.classList.add('notification-exit');
+                setTimeout(() => {
+                    if (notification.element.parentElement) {
+                        notification.element.remove();
+                    }
+                    this.notifications = this.notifications.filter(n => n.id !== id);
+                }, 300);
+            }
+        }
+
+        clear() {
+            this.notifications.forEach(n => this.remove(n.id));
+        }
+    }
+
+    const notificationManager = new NotificationManager();
+
+    // ============================================
+    // MAIN FUNCTIONS
+    // ============================================
+
+    // Wait for DOM to load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Dashboard initializing...');
+        simulateLoading();
+    });
+
+    function simulateLoading() {
+        let progress = 0;
+        const loadingBar = document.getElementById('loadingBar');
+        const interval = setInterval(() => {
+            progress += 2;
+            loadingBar.style.width = progress + '%';
+
+            if (progress >= 100) {
+                clearInterval(interval);
+                setTimeout(() => {
+                    document.getElementById('loadingScreen').style.display = 'none';
+                    document.getElementById('dashboard').classList.remove('hidden');
+                    document.getElementById('dashboard').classList.add('animate-fade-in');
+                    initializeDashboard();
+                }, 300);
+            }
+        }, 30);
+    }
+
+    async function initializeDashboard() {
+        console.log('Initializing dashboard...');
+
+        // Update time
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Initialize charts
+        initCharts();
+
+        // Setup event listeners
+        setupEventListeners();
+
+        // Try to connect to backend
+        try {
+            await fetchRealData();
+            isBackendConnected = true;
+            updateBackendStatus(true);
+            notificationManager.show('Backend Connected', 'Successfully connected to Spring Boot backend', 'success');
+        } catch (error) {
+            console.warn('Backend not reachable, using simulated data:', error);
+            isBackendConnected = false;
+            updateBackendStatus(false);
+            showSimulatedData();
+            notificationManager.show('Using Simulated Data', 'Spring Boot backend not reachable. Displaying demo data.', 'warning');
+        }
+
+        // Start real-time updates
+        startRealTimeUpdates();
+    }
+
+    function updateTime() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+        const dateStr = now.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'});
+
+        document.getElementById('currentTime').textContent = timeStr;
+        document.getElementById('currentDate').textContent = dateStr;
+    }
+
+    // ============================================
+    // BACKEND API FUNCTIONS
+    // ============================================
+
+    async function fetchRealData() {
+        console.log('Fetching real data from Spring Boot...');
+
+        try {
+            // Fetch device status
+            const statusResponse = await fetch(`${API_BASE}/devices/status`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!statusResponse.ok) throw new Error('Failed to fetch device status');
+            const statusData = await statusResponse.json();
+            updateKPICards(statusData);
+
+            // Fetch chart data
+            await fetchChartData(currentChartHours);
+
+            // Fetch current readings
+            const currentResponse = await fetch(`${API_BASE}/data/current`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (currentResponse.ok) {
+                const currentData = await currentResponse.json();
+                updateDeviceReadings(currentData);
+            }
+
+            // Fetch devices
+            const devicesResponse = await fetch(`${API_BASE}/devices`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (devicesResponse.ok) {
+                const devices = await devicesResponse.json();
+                updateDeviceTable(devices);
+            }
+
+            // Fetch messages
+            const messagesResponse = await fetch(`${API_BASE}/data/messages`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (messagesResponse.ok) {
+                const messages = await messagesResponse.json();
+                updateMQTTStream(messages);
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            throw error;
+        }
+    }
+
+    async function fetchChartData(hours) {
+        currentChartHours = hours;
+        try {
+            const response = await fetch(`${API_BASE}/data/charts/${hours}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.ok) {
+                const chartData = await chartData.json();
+                updateCharts(chartData);
+            }
+        } catch (error) {
+            console.log('Could not fetch chart data:', error);
+        }
+    }
+
+    // ============================================
+    // UI UPDATE FUNCTIONS
+    // ============================================
+
+    function updateKPICards(statusData) {
+        if (!statusData) return;
+
+        document.getElementById('totalDevices').textContent = statusData.totalDevices || 0;
+        document.getElementById('onlineDevices').textContent = statusData.onlineDevices || 0;
+        document.getElementById('offlineDevices').textContent = statusData.offlineDevices || 0;
+        document.getElementById('warningDevices').textContent = statusData.warningDevices || 0;
+        document.getElementById('activeAlerts').textContent = statusData.activeAlerts || 0;
+
+        const uptimeText = statusData.uptimePercentage || "0%";
+        document.getElementById('uptimePercentage').textContent = uptimeText + " uptime";
+
+        // Update sidebar counts
+        document.getElementById('deviceCount').textContent = statusData.totalDevices || 0;
+        document.getElementById('alertCount').textContent = statusData.activeAlerts || 0;
+
+        // Update notification badge
+        const alertCount = statusData.activeAlerts || 0;
+        const badge = document.getElementById('notificationBadge');
+        if (alertCount > 0) {
+            badge.textContent = alertCount;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+
+        // Update trend texts
+        const offlineStatus = statusData.offlineDevices > 0 ? 'Needs attention' : 'All good';
+        const warningStatus = statusData.warningDevices > 0 ? 'Check alerts' : 'No warnings';
+        const alertStatus = statusData.activeAlerts > 0 ? 'Immediate action' : 'No alerts';
+
+        document.getElementById('offlineStatus').textContent = offlineStatus;
+        document.getElementById('warningStatus').textContent = warningStatus;
+        document.getElementById('alertStatus').textContent = alertStatus;
+    }
+
+    function initCharts() {
+        // Temperature Chart
+        const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+        temperatureChart = new Chart(tempCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Temperature (°C)',
+                    data: [],
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#00d4ff',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: getChartOptions('°C', 20, 40)
+        });
+
+        // Humidity Chart
+        const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+        humidityChart = new Chart(humidityCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Humidity (%)',
+                    data: [],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#10b981',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: getChartOptions('%', 50, 90)
+        });
+    }
+
+    function getChartOptions(unit, min, max) {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                    titleColor: '#e2e8f0',
+                    bodyColor: '#e2e8f0',
+                    borderColor: '#334155',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y.toFixed(1) + unit;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8', maxRotation: 0 }
+                },
+                y: {
+                    beginAtZero: false,
+                    suggestedMin: min,
+                    suggestedMax: max,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        color: '#94a3b8',
+                        callback: function(value) {
+                            return value + unit;
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'nearest'
+            }
+        };
+    }
+
+    function updateCharts(chartData) {
+        if (!temperatureChart || !humidityChart) {
+            initCharts();
+        }
+
+        // Update temperature chart
+        if (chartData.temperatures && chartData.labels) {
+            temperatureChart.data.datasets[0].data = chartData.temperatures;
+            temperatureChart.data.labels = chartData.labels;
+            temperatureChart.update('none');
+
+            // Update temperature stats
+            if (chartData.temperatures.length > 0) {
+                const currentTemp = chartData.temperatures[chartData.temperatures.length - 1];
+                const avgTemp = chartData.temperatures.reduce((a, b) => a + b, 0) / chartData.temperatures.length;
+                document.getElementById('currentTemp').textContent = `Current: ${currentTemp.toFixed(1)}°C`;
+                document.getElementById('avgTemp').textContent = `Avg: ${avgTemp.toFixed(1)}°C`;
+            }
+        }
+
+        // Update humidity chart
+        if (chartData.humidities && chartData.labels) {
+            humidityChart.data.datasets[0].data = chartData.humidities;
+            humidityChart.data.labels = chartData.labels;
+            humidityChart.update('none');
+
+            // Update humidity stats
+            if (chartData.humidities.length > 0) {
+                const currentHumidity = chartData.humidities[chartData.humidities.length - 1];
+                document.getElementById('currentHumidity').textContent = `Current: ${currentHumidity.toFixed(1)}%`;
+            }
+        }
+    }
+
+    function updateDeviceReadings(currentData) {
+        const readingCardsContainer = document.getElementById('readingCards');
+        readingCardsContainer.innerHTML = '';
+
+        if (currentData && currentData.length > 0) {
+            for (let i = 0; i < Math.min(4, currentData.length); i++) {
+                const data = currentData[i];
+                const card = createReadingCard(data, i);
+                readingCardsContainer.appendChild(card);
+            }
+        } else {
+            // Show placeholder
+            const placeholders = [
+                { name: 'Living Room Temp', value: 31, type: 'temperature', status: 'online', timestamp: new Date(Date.now() - 120000) },
+                { name: 'Kitchen Temp', value: 29, type: 'temperature', status: 'online', timestamp: new Date(Date.now() - 60000) },
+                { name: 'Bedroom Humidity', value: 73, type: 'humidity', status: 'online', timestamp: new Date(Date.now() - 180000) },
+                { name: 'Garage Humidity', value: 67, type: 'humidity', status: 'warning', timestamp: new Date(Date.now() - 300000) }
+            ];
+
+            placeholders.forEach((placeholder, i) => {
+                const card = createReadingCard(placeholder, i);
+                readingCardsContainer.appendChild(card);
+            });
+        }
+    }
+
+    function createReadingCard(data, index) {
+        const card = document.createElement('div');
+        card.className = 'reading-card';
+
+        const isTemp = data.dataType === 'temperature' || data.type === 'temperature';
+        const icon = isTemp ? 'thermostat' : 'water_drop';
+        const iconColor = isTemp ? 'text-danger' : 'text-primary';
+        const value = data.value ? (typeof data.value === 'number' ? data.value.toFixed(1) : data.value) : '0.0';
+        const unit = isTemp ? '°C' : '%';
+        const name = data.deviceId || data.name || `Sensor ${index + 1}`;
+        const status = data.status || 'online';
+        const timeAgo = data.timestamp ? getTimeAgo(new Date(data.timestamp)) : '2m ago';
+
+        card.innerHTML = `
+            <div class="flex items-center justify-between mb-4">
+                <div class="text-sm font-medium text-gray-300 truncate pr-2">${name}</div>
+                <span class="material-icons-round ${iconColor} text-lg flex-shrink-0">${icon}</span>
+            </div>
+            <div class="text-3xl font-bold text-white mb-2">${value}${unit}</div>
+            <div class="flex items-center text-sm mt-auto">
+                <span class="status-dot status-${status}"></span>
+                <span class="text-gray-400 truncate">${status === 'online' ? 'Online' : 'Warning'} • ${timeAgo}</span>
+            </div>
+        `;
+
+        return card;
+    }
+
+    function updateDeviceTable(devices) {
+        const tableBody = document.getElementById('deviceStatusTable');
+        tableBody.innerHTML = '';
+
+        if (devices && devices.length > 0) {
+            devices.forEach(device => {
+                const row = createDeviceRow(device);
+                tableBody.appendChild(row);
+            });
+        } else {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-400">
+                        No devices found. Add some devices to get started!
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function createDeviceRow(device) {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-800/30 transition-colors';
+
+        const statusInfo = getStatusInfo(device.status);
+        const timeAgo = device.lastSeen ? getTimeAgo(new Date(device.lastSeen)) : 'Never';
+
+        row.innerHTML = `
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-sm font-medium text-white truncate max-w-[200px]">${device.name || device.deviceId || 'Unknown Device'}</div>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-sm text-gray-400 truncate">${device.type || 'Unknown'}</div>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="flex items-center">
+                    <span class="${statusInfo.dotClass}"></span>
+                    <span class="text-sm ${statusInfo.textClass} font-medium">${statusInfo.statusText}</span>
+                </div>
+            </td>
+            <td class="px-4 py-3 whitespace-nowrap">
+                <div class="text-sm text-gray-400">${timeAgo}</div>
+            </td>
+        `;
+
+        return row;
+    }
+
+    function getStatusInfo(status) {
+        switch (status) {
+            case 'online':
+                return {
+                    dotClass: 'status-dot status-online',
+                    textClass: 'text-success',
+                    statusText: 'Online'
+                };
+            case 'offline':
+                return {
+                    dotClass: 'status-dot status-offline',
+                    textClass: 'text-danger',
+                    statusText: 'Offline'
+                };
+            case 'warning':
+                return {
+                    dotClass: 'status-dot status-warning',
+                    textClass: 'text-warning',
+                    statusText: 'Warning'
+                };
+            default:
+                return {
+                    dotClass: 'status-dot status-offline',
+                    textClass: 'text-gray-400',
+                    statusText: 'Unknown'
+                };
+        }
+    }
+
+    function getTimeAgo(timestamp) {
+        const now = new Date();
+        const diffMs = now - timestamp;
+        const diffMins = Math.floor(diffMs / 60000);
+
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays}d ago`;
+    }
+
+    function updateMQTTStream(messages) {
+        const stream = document.getElementById('mqttStream');
+
+        // Clear placeholder
+        if (stream.querySelector('.text-center')) {
+            stream.innerHTML = '';
+        }
+
+        if (messages && messages.length > 0) {
+            messages.slice(-10).reverse().forEach(message => {
+                addMQTTMessage(
+                    message.topic || 'unknown/topic',
+                    JSON.stringify({
+                        device: message.deviceId,
+                        value: message.value,
+                        unit: message.unit,
+                        timestamp: message.timestamp
+                    }, null, 2),
+                    false
+                );
+            });
+        }
+
+        // Update message stats
+        const totalMessages = messages ? messages.length : 0;
+        updateMessageStats(totalMessages);
+    }
+
+    function addMQTTMessage(topic, payload, updateStats = true) {
+        const stream = document.getElementById('mqttStream');
+
+        // Clear placeholder if exists
+        if (stream.querySelector('.text-center')) {
+            stream.innerHTML = '';
+        }
+
+        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'mqtt-message p-3 border-b border-border-color last:border-b-0';
+        messageDiv.innerHTML = `
+            <div class="flex justify-between items-start mb-1 gap-2">
+                <span class="text-xs font-mono text-primary font-medium truncate">${topic}</span>
+                <span class="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">${time}</span>
+            </div>
+            <pre class="text-xs text-gray-300 font-mono overflow-x-auto bg-gray-900/30 p-2 rounded">${payload}</pre>
+        `;
+
+        stream.insertBefore(messageDiv, stream.firstChild);
+
+        // Keep only 10 messages
+        while (stream.children.length > 10) {
+            stream.removeChild(stream.lastChild);
+        }
+
+        // Update message count
+        if (updateStats) {
+            messageCount++;
+            updateMessageStats(messageCount);
+        }
+    }
+
+    function updateMessageStats(totalMessages) {
+        document.getElementById('totalMessages').textContent = totalMessages;
+
+        // Calculate message rate
+        const elapsedSeconds = (Date.now() - messageStartTime) / 1000;
+        const rate = elapsedSeconds > 0 ? (totalMessages / elapsedSeconds).toFixed(1) : '0.0';
+
+        document.getElementById('messageRate').textContent = rate;
+        document.getElementById('messageRate2').textContent = rate + '/s';
+    }
+
+    function updateBackendStatus(connected) {
+        isBackendConnected = connected;
+        const statusColor = connected ? 'bg-success' : 'bg-danger';
+        const statusText = connected ? 'Connected' : 'Disconnected';
+        const textColor = connected ? 'text-success' : 'text-danger';
+        const fullText = connected ? 'Spring Boot Connected' : 'Spring Boot Disconnected';
+
+        document.getElementById('mqttStatusDot').className = `absolute -top-0.5 -right-0.5 w-3 h-3 ${statusColor} rounded-full border-2 border-card-bg ${connected ? 'animate-pulse' : ''}`;
+        document.getElementById('mqttStatusText').textContent = statusText;
+        document.getElementById('mqttStatusText').className = `text-xs ${textColor} font-medium truncate`;
+
+        document.getElementById('backendStatusDot').className = `w-2 h-2 rounded-full ${statusColor} flex-shrink-0`;
+        document.getElementById('backendStatusText').textContent = statusText;
+        document.getElementById('backendStatusText').className = `text-xs ${textColor} font-medium whitespace-nowrap`;
+
+        document.getElementById('footerStatusDot').className = `w-2 h-2 rounded-full ${statusColor} mr-2 flex-shrink-0`;
+        document.getElementById('footerStatusText').textContent = fullText;
+        document.getElementById('footerStatusText').className = `text-sm ${textColor} font-medium`;
+    }
+
+    // ============================================
+    // EVENT HANDLERS
+    // ============================================
+
+    function setupEventListeners() {
+        // Navigation items
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+
+                const section = this.dataset.section;
+                notificationManager.show('Navigation', `Switched to ${section} view`, 'info', 2000);
+            });
+        });
+
+        // Time range buttons for charts
+        document.querySelectorAll('.time-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const chartContainer = this.closest('.chart-container');
+                chartContainer.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                const hours = parseInt(this.dataset.hours);
+                if (isBackendConnected) {
+                    await fetchChartData(hours);
+                    notificationManager.show('Chart Updated', `Showing ${hours === 24 ? '24 hours' : hours === 168 ? '7 days' : '30 days'} of data`, 'success', 2000);
+                }
+            });
+        });
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            // Implement search logic here
+            console.log('Searching for:', searchTerm);
+        });
+
+        // Add device button - open modal
+        document.getElementById('addDeviceBtn').addEventListener('click', () => {
+            document.getElementById('addDeviceModal').classList.remove('hidden');
+        });
+
+        // Close modal buttons
+        document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+        document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+
+        // Close modal on overlay click
+        document.getElementById('addDeviceModal').addEventListener('click', (e) => {
+            if (e.target.id === 'addDeviceModal') {
+                closeModal();
+            }
+        });
+
+        // Add device form submission
+        document.getElementById('addDeviceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const deviceName = document.getElementById('deviceName').value;
+            const deviceType = document.getElementById('deviceType').value;
+            const deviceLocation = document.getElementById('deviceLocation').value;
+            const deviceId = document.getElementById('deviceId').value || `device_${Date.now()}`;
+
+            const device = {
+                deviceId: deviceId,
+                name: deviceName,
+                type: deviceType,
+                location: deviceLocation,
+                status: 'online'
+            };
+
+            try {
+                if (isBackendConnected) {
+                    const response = await fetch(`${API_BASE}/devices`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(device)
+                    });
+
+                    if (response.ok) {
+                        notificationManager.show('Device Added', `${deviceName} has been added successfully`, 'success');
+                        await fetchRealData();
+                        closeModal();
+                        document.getElementById('addDeviceForm').reset();
+                    } else {
+                        throw new Error('Failed to add device');
+                    }
+                } else {
+                    notificationManager.show('Offline Mode', 'Cannot add device - backend disconnected', 'warning');
+                }
+            } catch (error) {
+                notificationManager.show('Error', 'Failed to add device: ' + error.message, 'error');
+            }
+        });
+
+        // Notification button
+        document.getElementById('notificationBtn').addEventListener('click', () => {
+            notificationManager.show('Notifications', 'No new notifications', 'info');
+        });
+
+        // Refresh data button
+        document.getElementById('refreshDataBtn').addEventListener('click', async () => {
+            if (isBackendConnected) {
+                try {
+                    await fetchRealData();
+                    notificationManager.show('Data Refreshed', 'Latest data fetched from backend', 'success', 2000);
+                } catch (error) {
+                    notificationManager.show('Refresh Failed', 'Could not fetch latest data', 'error');
+                }
+            } else {
+                notificationManager.show('Offline', 'Cannot refresh - backend disconnected', 'warning');
+            }
+        });
+
+        // Publish message button
+        document.getElementById('publishMessage').addEventListener('click', async () => {
+            const topic = document.getElementById('mqttTopic').value;
+            let payload = document.getElementById('mqttPayload').value.trim();
+
+            try {
+                if (!payload) {
+                    // Generate sample payload
+                    payload = generateSamplePayload(topic);
+                }
+
+                // Parse to validate JSON
+                const data = JSON.parse(payload);
+
+                if (isBackendConnected) {
+                    // Send to backend
+                    const response = await fetch(`${API_BASE}/data`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...data,
+                            topic: topic,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (response.ok) {
+                        notificationManager.show('Message Sent', 'Data saved to backend successfully', 'success', 2000);
+                        addMQTTMessage(topic, payload);
+                        await fetchRealData();
+                    } else {
+                        throw new Error('Backend rejected the message');
+                    }
+                } else {
+                    // Simulated mode
+                    addMQTTMessage(topic, payload);
+                    notificationManager.show('Simulated', 'Message displayed (backend offline)', 'warning', 2000);
+                }
+
+                document.getElementById('mqttPayload').value = '';
+            } catch (error) {
+                notificationManager.show('Invalid JSON', 'Please check your message format', 'error');
+            }
+        });
+
+        // Clear messages button
+        document.getElementById('clearMessages').addEventListener('click', () => {
+            document.getElementById('mqttStream').innerHTML = '<div class="p-4 text-center text-gray-400 text-sm">No messages yet. Start publishing to see data here.</div>';
+            messageCount = 0;
+            messageStartTime = Date.now();
+            updateMessageStats(0);
+            notificationManager.show('Cleared', 'Message stream cleared', 'info', 2000);
+        });
+    }
+
+    function closeModal() {
+        document.getElementById('addDeviceModal').classList.add('hidden');
+    }
+
+    function generateSamplePayload(topic) {
+        const now = new Date().toISOString();
+        if (topic.includes('temperature')) {
+            return JSON.stringify({
+                deviceId: `temp_sensor_${Date.now()}`,
+                dataType: 'temperature',
+                value: (Math.random() * 10 + 25).toFixed(1),
+                unit: '°C',
+                timestamp: now
+            }, null, 2);
+        } else if (topic.includes('humidity')) {
+            return JSON.stringify({
+                deviceId: `humidity_sensor_${Date.now()}`,
+                dataType: 'humidity',
+                value: Math.floor(Math.random() * 20 + 60),
+                unit: '%',
+                timestamp: now
+            }, null, 2);
+        } else {
+            return JSON.stringify({
+                deviceId: `device_${Date.now()}`,
+                dataType: 'status',
+                value: 1,
+                unit: 'status',
+                timestamp: now
+            }, null, 2);
+        }
+    }
+
+    // ============================================
+    // UTILITY FUNCTIONS
+    // ============================================
+
+    function startRealTimeUpdates() {
+        // Poll for updates every 10 seconds
+        setInterval(async () => {
+            if (isBackendConnected) {
+                try {
+                    await fetchRealData();
+                } catch (error) {
+                    console.log('Polling error:', error);
+                    isBackendConnected = false;
+                    updateBackendStatus(false);
+                    notificationManager.show('Connection Lost', 'Backend connection lost. Retrying...', 'warning');
+                }
+            } else {
+                // Try to reconnect
+                try {
+                    await fetchRealData();
+                    isBackendConnected = true;
+                    updateBackendStatus(true);
+                    notificationManager.show('Reconnected', 'Backend connection restored', 'success');
+                } catch (error) {
+                    // Still offline, do nothing
+                }
+            }
+        }, 10000);
+
+        // Update message rate every second
+        setInterval(() => {
+            updateMessageStats(messageCount);
+        }, 1000);
+    }
+
+    function showSimulatedData() {
+        // Simulated KPI data
+        updateKPICards({
+            totalDevices: 6,
+            onlineDevices: 4,
+            offlineDevices: 1,
+            warningDevices: 1,
+            activeAlerts: 2,
+            uptimePercentage: "66.7%"
+        });
+
+        // Simulated chart data
+        const labels = Array.from({length: 24}, (_, i) => `${i}:00`);
+        const temperatures = labels.map(() => 25 + Math.random() * 10);
+        const humidities = labels.map(() => 60 + Math.random() * 20);
+
+        updateCharts({ labels, temperatures, humidities });
+
+        // Simulated device table
+        const simulatedDevices = [
+            { name: 'Temperature Sensor 1', type: 'Temperature', status: 'online', lastSeen: new Date(Date.now() - 120000) },
+            { name: 'Humidity Sensor 1', type: 'Humidity', status: 'online', lastSeen: new Date(Date.now() - 60000) },
+            { name: 'Motion Detector', type: 'Motion', status: 'offline', lastSeen: new Date(Date.now() - 18000000) },
+            { name: 'Smart Light 1', type: 'Light', status: 'online', lastSeen: new Date(Date.now() - 30000) },
+            { name: 'Power Monitor', type: 'Energy', status: 'warning', lastSeen: new Date(Date.now() - 600000) },
+            { name: 'Security Camera', type: 'Camera', status: 'online', lastSeen: new Date(Date.now() - 90000) }
+        ];
+        updateDeviceTable(simulatedDevices);
+
+        // Simulated current readings
+        updateDeviceReadings([
+            { deviceId: 'Living Room', value: 31.5, type: 'temperature', status: 'online', timestamp: new Date(Date.now() - 120000) },
+            { deviceId: 'Kitchen', value: 29.2, type: 'temperature', status: 'online', timestamp: new Date(Date.now() - 60000) },
+            { deviceId: 'Bedroom', value: 73, type: 'humidity', status: 'online', timestamp: new Date(Date.now() - 180000) },
+            { deviceId: 'Garage', value: 67, type: 'humidity', status: 'warning', timestamp: new Date(Date.now() - 300000) }
+        ]);
+
+        // Add some MQTT messages
+        setTimeout(() => {
+            addMQTTMessage('iot/sensor/temperature', '{"device": "temp_sensor_1", "value": 31.5, "unit": "°C"}');
+        }, 500);
+
+        setTimeout(() => {
+            addMQTTMessage('iot/sensor/humidity', '{"device": "humidity_1", "value": 73, "unit": "%"}');
+        }, 1000);
+
+        setTimeout(() => {
+            addMQTTMessage('iot/device/status', '{"device": "motion_1", "status": "active"}');
+        }, 1500);
+    }
+
+    console.log('Dashboard initialization complete!');
 </script>
 </body>
 </html>
